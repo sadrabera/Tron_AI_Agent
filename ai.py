@@ -9,6 +9,7 @@ from chillin_client import RealtimeAI
 # project imports
 from ks.models import ECell, EDirection, Position
 from ks.commands import ChangeDirection, ActivateWallBreaker
+from queue import Queue
 
 
 class AI(RealtimeAI):
@@ -32,6 +33,7 @@ class AI(RealtimeAI):
         blue_walls = self._get_our_agent_blue_wall_neighbors()
         yellow_walls = self._get_our_agent_yellow_wall_neighbors()
         area_walls = self._get_our_agent_Area_wall_neighbors()
+        # print(self.find_distance_from_nearest_Area_wall())
         # print(f"empty_neighbors : {empty_neighbors}")
         # print(f"blue_walls : {blue_walls}")
         # print(f"yellow_walls : {yellow_walls}")
@@ -176,4 +178,42 @@ class AI(RealtimeAI):
 
     def _get_their_agent_position(self):
         return self.world.agents[self.other_side].position
+
+    def find_distance_from_nearest_Area_wall(self):  # using bfs
+        visited = {}
+        q = Queue()
+        our_position = (self._get_our_agent_position().y, self._get_our_agent_position().x)
+        q.put(our_position)
+        visited[our_position] = True
+        while not q.empty():
+            current_node = q.get()
+            for neighbor in self.find_neighbor(current_node[0], current_node[1]):
+                if neighbor not in visited:
+                    try:
+                        if self.world.board[neighbor[0]][neighbor[1]] == ECell.AreaWall:
+                            return abs(neighbor[0] - self._get_our_agent_position().y) + abs(neighbor[
+                                1] - self._get_our_agent_position().x)
+                    except:
+                        pass
+                    visited[neighbor] = True
+                    q.put(neighbor)
+
+    def find_neighbor(self, x, y):
+        return (y, x - 1), (y + 1, x), (y, x + 1), (y - 1, x)
+
+    def bfs(self, graph, start_node):
+        visited = {node: False for node in graph}
+        q = Queue()
+        q.put(start_node)
+        visited[start_node] = True
+
+        while not q.empty():
+            current_node = q.get()
+            print(current_node)
+
+            for neighbor in graph[current_node]:
+                if not visited[neighbor]:
+                    visited[neighbor] = True
+                    q.put(neighbor)
+
 
