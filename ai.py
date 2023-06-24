@@ -25,6 +25,7 @@ class AI(RealtimeAI):
 
     def initialize(self):
         print('initialize')
+        print(self.world.agents[self.my_side].direction)
 
     def decide(self):
         print('decide')
@@ -243,6 +244,7 @@ class AI(RealtimeAI):
         if maximizingPlayer:
             value = float('-inf')
             possible_moves = game_state.get_possible_moves(self.my_side)
+            print("======")
             for move in possible_moves:
                 child = game_state.get_new_state(move)
 
@@ -258,13 +260,16 @@ class AI(RealtimeAI):
         else:
             value = float('inf')
             possible_moves = game_state.get_possible_moves(self.other_side)
+            print("=============")
             for move in possible_moves:
                 child = game_state.get_new_state(move)
+                print("min:"+str(child.HS(self.my_side, self.other_side))+" it's move:"+str(move.move_left))
 
                 tmp = self.minimax(child, depth - 1, True, alpha, beta)[0]
                 if tmp < value:
                     value = tmp
                     best_movement = move
+            print("=============")
 
                 if value <= alpha:
                     break
@@ -297,10 +302,10 @@ class Game_State:
         with open('HS.json') as json_file:
             hs_variables = json.load(json_file)
         agents = self.world.agents
-        print("distance: "+str(self.find_distance_from_nearest_Area_wall()))
-        diff_points += self.find_distance_from_nearest_Area_wall()*hs_variables["Distance from nearest Area wall"]
-        diff_points -= agents[self.my_side].wall_breaker_cooldown * hs_variables["empty cooldown per second"]
-        # diff_points += agents[self.other_side].wall_breaker_cooldown * hs_variables["empty cooldown per second"]
+        # print("distance: " + str(self.find_distance_from_nearest_Area_wall()))
+        # diff_points += self.find_distance_from_nearest_Area_wall() * hs_variables["Distance from nearest Area wall"]
+        diff_points += agents[my_side].wall_breaker_cooldown * hs_variables["empty cooldown per second"]
+        diff_points += agents[other_side].wall_breaker_cooldown * hs_variables["empty cooldown per second"]
 
         diff_points += agents[self.my_side].wall_breaker_rem_time * hs_variables["remaning coldown per second"]
         # diff_points -= agents[self.other_side].wall_breaker_rem_time * hs_variables["remaning coldown per second"]
@@ -439,12 +444,12 @@ class Game_State:
         if agent.health == 0:
             if new_cell == ECell.AreaWall:
                 scores[move.side] -= constants.area_wall_crash_score
-            if move.side == "Yellow":
+            elif move.side == "Yellow":
                 if new_cell == ECell.YellowWall:
                     scores[move.side] -= constants.my_wall_crash_score
                 if new_cell == ECell.BlueWall:
                     scores[move.side] -= constants.enemy_wall_crash_score
-            if move.side == "Blue":
+            elif move.side == "Blue":
                 if new_cell == ECell.BlueWall:
                     scores[move.side] -= constants.my_wall_crash_score
                 if new_cell == ECell.YellowWall:
