@@ -3,6 +3,7 @@
 # python imports
 import json
 import random
+import time
 
 # chillin imports
 from chillin_client import RealtimeAI
@@ -22,25 +23,27 @@ class AI(RealtimeAI):
 
     def __init__(self, world):
         super(AI, self).__init__(world)
+        self.prev_decision = Moves(False, False, False, "Yellow")
 
     def initialize(self):
         print('initialize')
-        print(self.world.agents[self.my_side].direction)
+        print(str(self.world.agents[self.my_side].position) + "first step")
+        print(str(self.world.constants.area_wall_crash_score))
+        print(str(self.world.constants.my_wall_crash_score))
+        print(str(self.world.constants.enemy_wall_crash_score))
 
     def decide(self):
         print('decide')
-        game_state = Game_State(self.world, self.other_side, self.my_side)
-        minimax_l = self.minimax(game_state, 6, False)
+        game_state = Game_State(self.world, self.my_side, self.other_side)
+        start = time.time()
+        minimax_l = self.minimax(game_state, 9, True)
+        end = time.time()
+        print("time: " + str((end - start)))
+        if end - start > 8:
+            print('wtf')
         next_move = minimax_l[1]
-        # print("_-_-_")
-        # print(minimax_l[0])
-        # print("_-_-_")
-        if next_move != None:
-            print("--")
-            print(next_move.wall_breaker)
-            print(next_move.move_left)
-            print(next_move.move_right)
-            print("--")
+        self.prev_decision = next_move
+        if next_move is not None:
 
             if next_move.wall_breaker:
                 self.send_command(ActivateWallBreaker())
@@ -63,191 +66,15 @@ class AI(RealtimeAI):
                 if self.world.agents[self.my_side].direction == EDirection.Right:
                     self.send_command(ChangeDirection(EDirection.Down))
 
-    # self.client1()
-    # self.send_command(ChangeDirection(random.choice(list(EDirection))))
-    # if self.world.agents[self.my_side].wall_breaker_cooldown == 0:
-    #     self.send_command(ActivateWallBreaker())
-
-    # def client1(self):
-    #     my_team = self.my_side
-    #     empty_neighbors = self._get_our_agent_empty_neighbors()
-    #     blue_walls = self._get_our_agent_blue_wall_neighbors()
-    #     yellow_walls = self._get_our_agent_yellow_wall_neighbors()
-    #     area_walls = self._get_our_agent_Area_wall_neighbors()
-    #     # print(self.world.agents)
-    #     # print(self.find_distance_from_nearest_Area_wall())
-    #     # print(f"empty_neighbors : {empty_neighbors}")
-    #     # print(f"blue_walls : {blue_walls}")
-    #     # print(f"yellow_walls : {yellow_walls}")
-    #     if self.world.agents[self.my_side].wall_breaker_rem_time > 1:
-    #         # wall breaker is on
-    #         if my_team == "Yellow":
-    #             if blue_walls:
-    #                 self.send_command(ChangeDirection(random.choice(blue_walls)))
-    #             elif empty_neighbors:
-    #                 self.send_command(ChangeDirection(random.choice(empty_neighbors)))
-    #             elif yellow_walls:
-    #                 self.send_command(ChangeDirection(random.choice(yellow_walls)))
-    #             else:
-    #                 self.send_command(ChangeDirection(random.choice(list(EDirection))))
-    #         else:
-    #             if yellow_walls:
-    #                 self.send_command(ChangeDirection(random.choice(yellow_walls)))
-    #             elif empty_neighbors:
-    #                 self.send_command(ChangeDirection(random.choice(empty_neighbors)))
-    #             elif blue_walls:
-    #                 self.send_command(ChangeDirection(random.choice(blue_walls)))
-    #             else:
-    #                 self.send_command(ChangeDirection(random.choice(list(EDirection))))
-    #
-    #     else:
-    #         # wall breaker is off
-    #         if empty_neighbors:
-    #             self.send_command(ChangeDirection(random.choice(empty_neighbors)))
-    #         else:
-    #
-    #             if self.world.agents[my_team].wall_breaker_cooldown == 0 and not (
-    #                     self.world.agents[my_team].direction in area_walls):
-    #                 self.send_command(ActivateWallBreaker())
-    #             else:
-    #                 if my_team == "Yellow":
-    #                     if blue_walls:
-    #                         self.send_command(ChangeDirection(random.choice(blue_walls)))
-    #                     elif yellow_walls:
-    #                         self.send_command(ChangeDirection(random.choice(yellow_walls)))
-    #                     else:
-    #                         self.send_command(ChangeDirection(random.choice(list(EDirection))))
-    #                 else:
-    #                     if yellow_walls:
-    #                         self.send_command(ChangeDirection(random.choice(yellow_walls)))
-    #                     elif blue_walls:
-    #                         self.send_command(ChangeDirection(random.choice(blue_walls)))
-    #                     else:
-    #                         self.send_command(ChangeDirection(random.choice(list(EDirection))))
-
-    def _get_our_agent_empty_neighbors(self):
-        empty_neighbors = []
-
-        our_position = self._get_our_agent_position()
-
-        their_position = self._get_their_agent_position()
-        if our_position.x + 1 < len(self.world.board[0]):
-            if self.world.board[our_position.y][our_position.x + 1] == ECell.Empty and \
-                    not (our_position.x + 1 == their_position.x and our_position.y == their_position.y):
-                empty_neighbors.append(EDirection.Right)
-        if our_position.x - 1 >= 0:
-            if self.world.board[our_position.y][our_position.x - 1] == ECell.Empty and \
-                    not (our_position.x - 1 == their_position.x and our_position.y == their_position.y):
-                empty_neighbors.append(EDirection.Left)
-        if our_position.y + 1 < len(self.world.board):
-            if self.world.board[our_position.y + 1][our_position.x] == ECell.Empty and \
-                    not (our_position.x == their_position.x and our_position.y + 1 == their_position.y):
-                empty_neighbors.append(EDirection.Down)
-        if our_position.y - 1 >= 0:
-            if self.world.board[our_position.y - 1][our_position.x] == ECell.Empty and \
-                    not (our_position.x == their_position.x and our_position.y - 1 == their_position.y):
-                empty_neighbors.append(EDirection.Up)
-        return empty_neighbors
-
-    def _get_our_agent_blue_wall_neighbors(self):
-        blue_walls = []
-        our_position = self._get_our_agent_position()
-        their_position = self._get_their_agent_position()
-        if our_position.x + 1 < len(self.world.board[0]):
-            if self.world.board[our_position.y][our_position.x + 1] == ECell.BlueWall and \
-                    not (our_position.x + 1 == their_position.x and our_position.y == their_position.y):
-                blue_walls.append(EDirection.Right)
-        if our_position.x - 1 >= 0:
-            if self.world.board[our_position.y][our_position.x - 1] == ECell.BlueWall and \
-                    not (our_position.x - 1 == their_position.x and our_position.y == their_position.y):
-                blue_walls.append(EDirection.Left)
-        if our_position.y + 1 < len(self.world.board):
-            if self.world.board[our_position.y + 1][our_position.x] == ECell.BlueWall and \
-                    not (our_position.x == their_position.x and our_position.y + 1 == their_position.y):
-                blue_walls.append(EDirection.Down)
-        if our_position.y - 1 >= 0:
-            if self.world.board[our_position.y - 1][our_position.x] == ECell.BlueWall and \
-                    not (our_position.x == their_position.x and our_position.y - 1 == their_position.y):
-                blue_walls.append(EDirection.Up)
-        return blue_walls
-
-    def _get_our_agent_yellow_wall_neighbors(self):
-        yellow_walls = []
-        our_position = self._get_our_agent_position()
-        their_position = self._get_their_agent_position()
-        if our_position.x + 1 < len(self.world.board[0]):
-            if self.world.board[our_position.y][our_position.x + 1] == ECell.YellowWall and \
-                    not (our_position.x + 1 == their_position.x and our_position.y == their_position.y):
-                yellow_walls.append(EDirection.Right)
-        if our_position.x - 1 >= 0:
-            if self.world.board[our_position.y][our_position.x - 1] == ECell.YellowWall and \
-                    not (our_position.x - 1 == their_position.x and our_position.y == their_position.y):
-                yellow_walls.append(EDirection.Left)
-        if our_position.y + 1 < len(self.world.board):
-            if self.world.board[our_position.y + 1][our_position.x] == ECell.YellowWall and \
-                    not (our_position.x == their_position.x and our_position.y + 1 == their_position.y):
-                yellow_walls.append(EDirection.Down)
-        if our_position.y - 1 >= 0:
-            if self.world.board[our_position.y - 1][our_position.x] == ECell.YellowWall and \
-                    not (our_position.x == their_position.x and our_position.y - 1 == their_position.y):
-                yellow_walls.append(EDirection.Up)
-        return yellow_walls
-
-    def _get_our_agent_Area_wall_neighbors(self):
-        area_walls = []
-        our_position = self._get_our_agent_position()
-        their_position = self._get_their_agent_position()
-        if our_position.x + 1 < len(self.world.board[0]):
-            if self.world.board[our_position.y][our_position.x + 1] == ECell.AreaWall and \
-                    not (our_position.x + 1 == their_position.x and our_position.y == their_position.y):
-                area_walls.append(EDirection.Right)
-        if our_position.x - 1 >= 0:
-            if self.world.board[our_position.y][our_position.x - 1] == ECell.AreaWall and \
-                    not (our_position.x - 1 == their_position.x and our_position.y == their_position.y):
-                area_walls.append(EDirection.Left)
-        if our_position.y + 1 < len(self.world.board):
-            if self.world.board[our_position.y + 1][our_position.x] == ECell.AreaWall and \
-                    not (our_position.x == their_position.x and our_position.y + 1 == their_position.y):
-                area_walls.append(EDirection.Down)
-        if our_position.y - 1 >= 0:
-            if self.world.board[our_position.y - 1][our_position.x] == ECell.AreaWall and \
-                    not (our_position.x == their_position.x and our_position.y - 1 == their_position.y):
-                area_walls.append(EDirection.Up)
-        return area_walls
-
-    def _get_our_agent_position(self):
-        return self.world.agents[self.my_side].position
-
-    def _get_their_agent_position(self):
-        return self.world.agents[self.other_side].position
-
-    # def bfs(self, graph, start_node):
-    #     visited = {node: False for node in graph}
-    #     q = Queue()
-    #     q.put(start_node)
-    #     visited[start_node] = True
-    #
-    #     while not q.empty():
-    #         current_node = q.get()
-    #         print(current_node)
-    #
-    #         for neighbor in graph[current_node]:
-    #             if not visited[neighbor]:
-    #                 visited[neighbor] = True
-    #                 q.put(neighbor)
-
     def minimax(self, game_state, depth: int, maximizingPlayer: bool, alpha=float('-inf'), beta=float('inf')):
-
         if (depth == 0) or (game_state.is_terminal()):
-            return game_state.HS(), None
+            return game_state.HS(self.my_side, self.other_side), None
 
         if maximizingPlayer:
             value = float('-inf')
-            possible_moves = game_state.get_possible_moves(self.my_side)
-            print("======")
+            possible_moves = game_state.get_possible_moves(self.my_side, self.prev_decision)
             for move in possible_moves:
                 child = game_state.get_new_state(move)
-
                 tmp = self.minimax(child, depth - 1, False, alpha, beta)[0]
                 if tmp > value:
                     value = tmp
@@ -259,22 +86,20 @@ class AI(RealtimeAI):
 
         else:
             value = float('inf')
-            possible_moves = game_state.get_possible_moves(self.other_side)
-            print("=============")
+            possible_moves = game_state.get_possible_moves(self.other_side, self.prev_decision)
             for move in possible_moves:
+
                 child = game_state.get_new_state(move)
-                print("min:"+str(child.HS(self.my_side, self.other_side))+" it's move:"+str(move.move_left))
 
                 tmp = self.minimax(child, depth - 1, True, alpha, beta)[0]
                 if tmp < value:
                     value = tmp
                     best_movement = move
-            print("=============")
 
                 if value <= alpha:
                     break
                 beta = min(beta, value)
-        # print(value)
+
         return value, best_movement
 
 
@@ -292,32 +117,32 @@ class Game_State:
         self.my_side = my_side
         self.other_side = other_side
 
-    def HS(self):
+    def HS(self, my_side, other_side):
 
-        # diff_points = self.world.scores[self.my_side] - self.world.scores[self.other_side]
-        diff_points = self.world.scores[self.my_side]
+        diff_points = self.world.scores[my_side] - self.world.scores[other_side]
         if self.is_terminal():
             return diff_points
-        hs_variables = dict()
-        with open('HS.json') as json_file:
-            hs_variables = json.load(json_file)
+        hs_variables = {
+            "full Cooldown": 1.5,
+            "remaning coldown per second": 1,
+            "empty cooldown per second": -1,
+            "value per health": 30
+        }
         agents = self.world.agents
         # print("distance: " + str(self.find_distance_from_nearest_Area_wall()))
         # diff_points += self.find_distance_from_nearest_Area_wall() * hs_variables["Distance from nearest Area wall"]
-        diff_points += agents[my_side].wall_breaker_cooldown * hs_variables["empty cooldown per second"]
-        diff_points += agents[other_side].wall_breaker_cooldown * hs_variables["empty cooldown per second"]
-
-        diff_points += agents[self.my_side].wall_breaker_rem_time * hs_variables["remaning coldown per second"]
-        # diff_points -= agents[self.other_side].wall_breaker_rem_time * hs_variables["remaning coldown per second"]
-
-        diff_points += agents[self.my_side].health * hs_variables["value per health"]
-        # diff_points -= agents[self.other_side].health * hs_variables["value per health"]
-
-        if agents[self.my_side].wall_breaker_rem_time == 0 and agents[
-            self.my_side].wall_breaker_cooldown == 0:
-            diff_points += hs_variables["full Cooldown"] * self.world.constants.wall_breaker_duration
-        # if agents[self.other_side].wall_breaker_rem_time == 0 and agents[
-        #     self.other_side].wall_breaker_cooldown == 0:
+        # diff_points += agents[my_side].wall_breaker_cooldown * hs_variables["empty cooldown per second"]
+        # diff_points -= agents[other_side].wall_breaker_cooldown * hs_variables["empty cooldown per second"]
+        #
+        # diff_points += agents[my_side].wall_breaker_rem_time * hs_variables["remaning coldown per second"]
+        # diff_points -= agents[other_side].wall_breaker_rem_time * hs_variables["remaning coldown per second"]
+        #
+        diff_points += agents[my_side].health * hs_variables["value per health"]
+        diff_points -= agents[other_side].health * hs_variables["value per health"]
+        #
+        # if agents[my_side].wall_breaker_rem_time == 0 and agents[my_side].wall_breaker_cooldown == 0:
+        #     diff_points += hs_variables["full Cooldown"] * self.world.constants.wall_breaker_duration
+        # if agents[other_side].wall_breaker_rem_time == 0 and agents[other_side].wall_breaker_cooldown == 0:
         #     diff_points -= hs_variables["full Cooldown"] * self.world.constants.wall_breaker_duration
 
         return diff_points
@@ -359,15 +184,29 @@ class Game_State:
 
         return False
 
-    def get_possible_moves(self, side):
+    def get_possible_moves(self, side, prev_decision: Moves):
         agents = self.world.agents
 
-        possible_moves = [Moves(False, False, False, side), Moves(False, True, False, side),
-                          Moves(False, False, True, side)]
+        if prev_decision.move_left:
+            possible_moves = [Moves(False, True, False, side), Moves(False, False, False, side),
+                              Moves(False, False, True, side)]
+        elif prev_decision.move_right:
+            possible_moves = [Moves(False, False, True, side), Moves(False, False, False, side),
+                              Moves(False, True, False, side)]
+        else:
+            possible_moves = [Moves(False, False, False, side), Moves(False, True, False, side),
+                              Moves(False, False, True, side)]
 
-        if agents[self.my_side].wall_breaker_rem_time == 0 and agents[self.my_side].wall_breaker_cooldown == 0:
-            possible_moves.extend(
-                [Moves(True, False, False, side), Moves(True, True, False, side), Moves(True, False, True, side)])
+        if agents[side].wall_breaker_rem_time == 0 and agents[side].wall_breaker_cooldown == 0:
+            if prev_decision.move_left:
+                possible_moves.extend([Moves(True, True, False, side), Moves(True, False, False, side),
+                                       Moves(True, False, True, side)])
+            elif prev_decision.move_right:
+                possible_moves.extend([Moves(True, False, True, side), Moves(True, False, False, side),
+                                       Moves(True, True, False, side)])
+            else:
+                possible_moves.extend([Moves(True, False, False, side), Moves(True, True, False, side),
+                                       Moves(True, False, True, side)])
 
         return possible_moves
 
@@ -379,39 +218,39 @@ class Game_State:
             if agent.direction == EDirection.Up:
                 agent.position.x -= 1
                 agent.direction = EDirection.Left
-            if agent.direction == EDirection.Left:
-                agent.position.y -= 1
+            elif agent.direction == EDirection.Left:
+                agent.position.y += 1
                 agent.direction = EDirection.Down
-            if agent.direction == EDirection.Down:
+            elif agent.direction == EDirection.Down:
                 agent.position.x += 1
                 agent.direction = EDirection.Right
-            if agent.direction == EDirection.Right:
-                agent.position.y += 1
+            elif agent.direction == EDirection.Right:
+                agent.position.y -= 1
                 agent.direction = EDirection.Up
 
         elif move.move_right:
             if agent.direction == EDirection.Up:
                 agent.position.x += 1
                 agent.direction = EDirection.Right
-            if agent.direction == EDirection.Left:
-                agent.position.y += 1
+            elif agent.direction == EDirection.Left:
+                agent.position.y -= 1
                 agent.direction = EDirection.Up
-            if agent.direction == EDirection.Down:
+            elif agent.direction == EDirection.Down:
                 agent.position.x -= 1
                 agent.direction = EDirection.Left
-            if agent.direction == EDirection.Right:
-                agent.position.y -= 1
+            elif agent.direction == EDirection.Right:
+                agent.position.y += 1
                 agent.direction = EDirection.Down
 
         else:
             if agent.direction == EDirection.Up:
-                agent.position.y += 1
-            if agent.direction == EDirection.Left:
-                agent.position.x += 1
-            if agent.direction == EDirection.Down:
                 agent.position.y -= 1
-            if agent.direction == EDirection.Right:
+            elif agent.direction == EDirection.Left:
                 agent.position.x -= 1
+            elif agent.direction == EDirection.Down:
+                agent.position.y += 1
+            elif agent.direction == EDirection.Right:
+                agent.position.x += 1
 
         constants = self.world.constants
         if move.wall_breaker:
@@ -422,19 +261,21 @@ class Game_State:
             agent.wall_breaker_cooldown -= 1
 
         new_cell = new_world.board[agent.position.y][agent.position.x]
-        scores = self.world.scores
+        scores = new_world.scores
         if new_cell == ECell.BlueWall or new_cell == ECell.YellowWall:
-
-            if agent.wall_breaker_rem_time < 1:
+            if agent.wall_breaker_rem_time < 2:
                 agent.health -= 1
             if new_cell == ECell.BlueWall:
+                # print("into Blue Wall")
                 scores["Blue"] -= constants.wall_score_coefficient
             if new_cell == ECell.YellowWall:
+                # print("into Yellow Wall")
                 scores["Yellow"] -= constants.wall_score_coefficient
 
         scores[move.side] += constants.wall_score_coefficient
 
         if new_cell == ECell.AreaWall:
+            # print("into Area Wall")
             agent.health = 0
         elif move.side == "Blue":
             new_cell = ECell.BlueWall
@@ -442,16 +283,17 @@ class Game_State:
             new_cell = ECell.YellowWall
 
         if agent.health == 0:
+            # print("dead")
             if new_cell == ECell.AreaWall:
-                scores[move.side] -= constants.area_wall_crash_score
+                scores[move.side] += constants.area_wall_crash_score
             elif move.side == "Yellow":
                 if new_cell == ECell.YellowWall:
-                    scores[move.side] -= constants.my_wall_crash_score
+                    scores[move.side] += constants.my_wall_crash_score
                 if new_cell == ECell.BlueWall:
-                    scores[move.side] -= constants.enemy_wall_crash_score
+                    scores[move.side] += constants.enemy_wall_crash_score
             elif move.side == "Blue":
                 if new_cell == ECell.BlueWall:
-                    scores[move.side] -= constants.my_wall_crash_score
+                    scores[move.side] += constants.my_wall_crash_score
                 if new_cell == ECell.YellowWall:
-                    scores[move.side] -= constants.enemy_wall_crash_score
+                    scores[move.side] += constants.enemy_wall_crash_score
         return Game_State(new_world, self.other_side, self.my_side)
