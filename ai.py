@@ -26,12 +26,17 @@ class AI(RealtimeAI):
         self.prev_decision = Moves(False, False, False, "Yellow")
         self.left_right = 0
 
+    
+    hs_variables=dict()
+    
     def initialize(self):
         print('initialize')
         print(str(self.world.agents[self.my_side].position) + "first step")
         print(str(self.world.constants.area_wall_crash_score))
         print(str(self.world.constants.my_wall_crash_score))
         print(str(self.world.constants.enemy_wall_crash_score))
+        with open('HS.json') as json_file:
+            hs_variables = json.load(json_file)
 
 
     def decide(self):
@@ -134,9 +139,7 @@ class Game_State:
         diff_points = self.world.scores[my_side] - self.world.scores[other_side]
         if self.is_terminal():
             return diff_points
-        hs_variables = dict()
-        with open('HS.json') as json_file:
-            hs_variables = json.load(json_file)
+        
         agents = self.world.agents
 
         diff_points += agents[my_side].health * hs_variables["value per health"]
