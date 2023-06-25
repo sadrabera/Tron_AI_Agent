@@ -147,25 +147,6 @@ class Game_State:
 
         return diff_points
 
-    def find_distance_from_nearest_Area_wall(self):  # using bfs
-        visited = {}
-        q = Queue()
-        my_agent_position = self.world.agents[self.my_side].position
-        our_position = (my_agent_position.y, my_agent_position.x)
-        q.put(our_position)
-        visited[our_position] = True
-        while not q.empty():
-            current_node = q.get()
-            for neighbor in find_neighbor(current_node[1], current_node[0]):
-                if neighbor not in visited:
-                    try:
-                        if self.world.board[neighbor[0]][neighbor[1]] == ECell.AreaWall:
-                            return abs(neighbor[0] - my_agent_position.y) + abs(neighbor[1] - my_agent_position.x)
-                    except:
-                        pass
-                    visited[neighbor] = True
-                    q.put(neighbor)
-
     def is_terminal(self):
         agents = self.world.agents
         our_position = agents[self.my_side].position
