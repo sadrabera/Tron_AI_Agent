@@ -24,6 +24,7 @@ class AI(RealtimeAI):
     def __init__(self, world):
         super(AI, self).__init__(world)
         self.prev_decision = Moves(False, False, False, "Yellow")
+        self.left_right = 0
 
     def initialize(self):
         print('initialize')
@@ -32,11 +33,12 @@ class AI(RealtimeAI):
         print(str(self.world.constants.my_wall_crash_score))
         print(str(self.world.constants.enemy_wall_crash_score))
 
+
     def decide(self):
         print('decide')
-        game_state = Game_State(self.world, self.my_side, self.other_side)
+        game_state = Game_State(self.world, self.my_side, self.other_side, self.left_right)
         start = time.time()
-        minimax_l = self.minimax(game_state, 9, True)
+        minimax_l = self.minimax(game_state, 8, True)
         end = time.time()
         print("time: " + str((end - start)))
         if end - start > 8:
@@ -48,6 +50,9 @@ class AI(RealtimeAI):
             if next_move.wall_breaker:
                 self.send_command(ActivateWallBreaker())
             if next_move.move_left:
+                if self.left_right > 0:
+                    self.left_right = 0
+                self.left_right -= 1
                 if self.world.agents[self.my_side].direction == EDirection.Up:
                     self.send_command(ChangeDirection(EDirection.Left))
                 if self.world.agents[self.my_side].direction == EDirection.Left:
@@ -57,6 +62,9 @@ class AI(RealtimeAI):
                 if self.world.agents[self.my_side].direction == EDirection.Right:
                     self.send_command(ChangeDirection(EDirection.Up))
             elif next_move.move_right:
+                if self.left_right < 0:
+                    self.left_right = 0
+                self.left_right += 1
                 if self.world.agents[self.my_side].direction == EDirection.Up:
                     self.send_command(ChangeDirection(EDirection.Right))
                 if self.world.agents[self.my_side].direction == EDirection.Left:
@@ -70,6 +78,8 @@ class AI(RealtimeAI):
         if (depth == 0) or (game_state.is_terminal()):
             return game_state.HS(self.my_side, self.other_side), None
 
+        print(game_state.left_right)
+
         if maximizingPlayer:
             value = float('-inf')
             possible_moves = game_state.get_possible_moves(self.my_side, self.prev_decision)
@@ -79,6 +89,7 @@ class AI(RealtimeAI):
                 if tmp > value:
                     value = tmp
                     best_movement = move
+                    best_state = child
 
                 if value >= beta:
                     break
@@ -95,6 +106,7 @@ class AI(RealtimeAI):
                 if tmp < value:
                     value = tmp
                     best_movement = move
+                    best_state = child
 
                 if value <= alpha:
                     break
@@ -112,38 +124,28 @@ class Moves:
 
 
 class Game_State:
-    def __init__(self, world: World, my_side, other_side):
+    def __init__(self, world: World, my_side, other_side, left_right):
         self.world = world
         self.my_side = my_side
         self.other_side = other_side
+        self.left_right = left_right
 
     def HS(self, my_side, other_side):
 
         diff_points = self.world.scores[my_side] - self.world.scores[other_side]
         if self.is_terminal():
             return diff_points
-        hs_variables = {
-            "full Cooldown": 1.5,
-            "remaning coldown per second": 1,
-            "empty cooldown per second": -1,
-            "value per health": 30
-        }
+        hs_variables = dict()
+        with open('HS.json') as json_file:
+            hs_variables = json.load(json_file)
         agents = self.world.agents
-        # print("distance: " + str(self.find_distance_from_nearest_Area_wall()))
-        # diff_points += self.find_distance_from_nearest_Area_wall() * hs_variables["Distance from nearest Area wall"]
-        # diff_points += agents[my_side].wall_breaker_cooldown * hs_variables["empty cooldown per second"]
-        # diff_points -= agents[other_side].wall_breaker_cooldown * hs_variables["empty cooldown per second"]
-        #
-        # diff_points += agents[my_side].wall_breaker_rem_time * hs_variables["remaning coldown per second"]
-        # diff_points -= agents[other_side].wall_breaker_rem_time * hs_variables["remaning coldown per second"]
-        #
+
         diff_points += agents[my_side].health * hs_variables["value per health"]
         diff_points -= agents[other_side].health * hs_variables["value per health"]
-        #
-        # if agents[my_side].wall_breaker_rem_time == 0 and agents[my_side].wall_breaker_cooldown == 0:
-        #     diff_points += hs_variables["full Cooldown"] * self.world.constants.wall_breaker_duration
-        # if agents[other_side].wall_breaker_rem_time == 0 and agents[other_side].wall_breaker_cooldown == 0:
-        #     diff_points -= hs_variables["full Cooldown"] * self.world.constants.wall_breaker_duration
+
+        # if abs(self.left_right) > 2:
+        #     print(abs(self.left_right))
+        #     diff_points -= (abs(self.left_right) - 2) * hs_variables["left and right"]
 
         return diff_points
 
@@ -168,10 +170,10 @@ class Game_State:
     def get_possible_moves(self, side, prev_decision: Moves):
         agents = self.world.agents
 
-        if prev_decision.move_left:
+        if prev_decision.move_left and self.left_right > -2 or self.left_right > 2:
             possible_moves = [Moves(False, True, False, side), Moves(False, False, False, side),
                               Moves(False, False, True, side)]
-        elif prev_decision.move_right:
+        elif prev_decision.move_right and self.left_right < 2 or self.left_right < -2:
             possible_moves = [Moves(False, False, True, side), Moves(False, False, False, side),
                               Moves(False, True, False, side)]
         else:
@@ -179,10 +181,10 @@ class Game_State:
                               Moves(False, False, True, side)]
 
         if agents[side].wall_breaker_rem_time == 0 and agents[side].wall_breaker_cooldown == 0:
-            if prev_decision.move_left:
+            if prev_decision.move_left and self.left_right > -2 or self.left_right > 2:
                 possible_moves.extend([Moves(True, True, False, side), Moves(True, False, False, side),
                                        Moves(True, False, True, side)])
-            elif prev_decision.move_right:
+            elif prev_decision.move_right and self.left_right < 2 or self.left_right < -2:
                 possible_moves.extend([Moves(True, False, True, side), Moves(True, False, False, side),
                                        Moves(True, True, False, side)])
             else:
@@ -192,10 +194,17 @@ class Game_State:
         return possible_moves
 
     def get_new_state(self, move: Moves):
+
         new_world = deepcopy(self.world)
+
         agent = new_world.agents[move.side]
+        new_left_right = self.left_right
+        # print(self.left_right)
 
         if move.move_left:
+            if new_left_right > 0:
+                new_left_right = 0
+            new_left_right -= 1
             if agent.direction == EDirection.Up:
                 agent.position.x -= 1
                 agent.direction = EDirection.Left
@@ -210,6 +219,9 @@ class Game_State:
                 agent.direction = EDirection.Up
 
         elif move.move_right:
+            if new_left_right < 0:
+                new_left_right = 0
+            new_left_right += 1
             if agent.direction == EDirection.Up:
                 agent.position.x += 1
                 agent.direction = EDirection.Right
@@ -247,16 +259,13 @@ class Game_State:
             if agent.wall_breaker_rem_time < 2:
                 agent.health -= 1
             if new_cell == ECell.BlueWall:
-                # print("into Blue Wall")
                 scores["Blue"] -= constants.wall_score_coefficient
             if new_cell == ECell.YellowWall:
-                # print("into Yellow Wall")
                 scores["Yellow"] -= constants.wall_score_coefficient
 
         scores[move.side] += constants.wall_score_coefficient
 
         if new_cell == ECell.AreaWall:
-            # print("into Area Wall")
             agent.health = 0
         elif move.side == "Blue":
             new_cell = ECell.BlueWall
@@ -264,7 +273,6 @@ class Game_State:
             new_cell = ECell.YellowWall
 
         if agent.health == 0:
-            # print("dead")
             if new_cell == ECell.AreaWall:
                 scores[move.side] += constants.area_wall_crash_score
             elif move.side == "Yellow":
@@ -277,4 +285,5 @@ class Game_State:
                     scores[move.side] += constants.my_wall_crash_score
                 if new_cell == ECell.YellowWall:
                     scores[move.side] += constants.enemy_wall_crash_score
-        return Game_State(new_world, self.other_side, self.my_side)
+        new_game_state = Game_State(new_world, self.other_side, self.my_side, new_left_right)
+        return new_game_state
