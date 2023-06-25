@@ -40,6 +40,7 @@ class AI(RealtimeAI):
         start = time.time()
         minimax_l = self.minimax(game_state, 8, True)
         end = time.time()
+        print(self.left_right)
         print("time: " + str((end - start)))
         if end - start > 8:
             print('wtf')
@@ -77,8 +78,6 @@ class AI(RealtimeAI):
     def minimax(self, game_state, depth: int, maximizingPlayer: bool, alpha=float('-inf'), beta=float('inf')):
         if (depth == 0) or (game_state.is_terminal()):
             return game_state.HS(self.my_side, self.other_side), None
-
-        print(game_state.left_right)
 
         if maximizingPlayer:
             value = float('-inf')
@@ -143,9 +142,9 @@ class Game_State:
         diff_points += agents[my_side].health * hs_variables["value per health"]
         diff_points -= agents[other_side].health * hs_variables["value per health"]
 
-        # if abs(self.left_right) > 2:
-        #     print(abs(self.left_right))
-        #     diff_points -= (abs(self.left_right) - 2) * hs_variables["left and right"]
+        if abs(self.left_right) > 2:
+            print(abs(self.left_right))
+            diff_points -= (abs(self.left_right) - 2) * hs_variables["left and right"]
 
         return diff_points
 
