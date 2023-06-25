@@ -83,7 +83,7 @@ class AI(RealtimeAI):
             value = float('-inf')
             possible_moves = game_state.get_possible_moves(self.my_side, self.prev_decision)
             for move in possible_moves:
-                child = game_state.get_new_state(move)
+                child = game_state.get_new_state(move, self.my_side)
                 tmp = self.minimax(child, depth - 1, False, alpha, beta)[0]
                 if tmp > value:
                     value = tmp
@@ -99,7 +99,7 @@ class AI(RealtimeAI):
             possible_moves = game_state.get_possible_moves(self.other_side, self.prev_decision)
             for move in possible_moves:
 
-                child = game_state.get_new_state(move)
+                child = game_state.get_new_state(move, self.my_side)
 
                 tmp = self.minimax(child, depth - 1, True, alpha, beta)[0]
                 if tmp < value:
@@ -142,9 +142,8 @@ class Game_State:
         diff_points += agents[my_side].health * hs_variables["value per health"]
         diff_points -= agents[other_side].health * hs_variables["value per health"]
 
-        if abs(self.left_right) > 2:
-            print(abs(self.left_right))
-            diff_points -= (abs(self.left_right) - 2) * hs_variables["left and right"]
+        # if abs(self.left_right) > 2:
+        #     diff_points -= (abs(self.left_right) - 2) * hs_variables["left and right"]
 
         return diff_points
 
@@ -169,10 +168,16 @@ class Game_State:
     def get_possible_moves(self, side, prev_decision: Moves):
         agents = self.world.agents
 
-        if prev_decision.move_left and self.left_right > -2 or self.left_right > 2:
+        if self.left_right == 2:
+            possible_moves = [Moves(False, False, False, side), Moves(False, True, False, side),
+                              Moves(False, False, True, side)]
+        elif self.left_right == -2:
+            possible_moves = [Moves(False, False, False, side), Moves(False, False, True, side),
+                              Moves(False, False, False, side)]
+        elif self.left_right > 2 or (prev_decision.move_left and self.left_right > -2):
             possible_moves = [Moves(False, True, False, side), Moves(False, False, False, side),
                               Moves(False, False, True, side)]
-        elif prev_decision.move_right and self.left_right < 2 or self.left_right < -2:
+        elif self.left_right < -2 or (prev_decision.move_right and self.left_right < 2):
             possible_moves = [Moves(False, False, True, side), Moves(False, False, False, side),
                               Moves(False, True, False, side)]
         else:
@@ -180,10 +185,10 @@ class Game_State:
                               Moves(False, False, True, side)]
 
         if agents[side].wall_breaker_rem_time == 0 and agents[side].wall_breaker_cooldown == 0:
-            if prev_decision.move_left and self.left_right > -2 or self.left_right > 2:
+            if self.left_right > 2 or (prev_decision.move_left and self.left_right > -2):
                 possible_moves.extend([Moves(True, True, False, side), Moves(True, False, False, side),
                                        Moves(True, False, True, side)])
-            elif prev_decision.move_right and self.left_right < 2 or self.left_right < -2:
+            elif self.left_right < -2 or (prev_decision.move_right and self.left_right < 2):
                 possible_moves.extend([Moves(True, False, True, side), Moves(True, False, False, side),
                                        Moves(True, True, False, side)])
             else:
@@ -192,7 +197,7 @@ class Game_State:
 
         return possible_moves
 
-    def get_new_state(self, move: Moves):
+    def get_new_state(self, move: Moves, actual_my_side):
 
         new_world = deepcopy(self.world)
 
@@ -201,9 +206,10 @@ class Game_State:
         # print(self.left_right)
 
         if move.move_left:
-            if new_left_right > 0:
-                new_left_right = 0
-            new_left_right -= 1
+            if actual_my_side == move.side:
+                if new_left_right > 0:
+                    new_left_right = 0
+                new_left_right -= 1
             if agent.direction == EDirection.Up:
                 agent.position.x -= 1
                 agent.direction = EDirection.Left
@@ -218,9 +224,10 @@ class Game_State:
                 agent.direction = EDirection.Up
 
         elif move.move_right:
-            if new_left_right < 0:
-                new_left_right = 0
-            new_left_right += 1
+            if actual_my_side == move.side:
+                if new_left_right < 0:
+                    new_left_right = 0
+                new_left_right += 1
             if agent.direction == EDirection.Up:
                 agent.position.x += 1
                 agent.direction = EDirection.Right
