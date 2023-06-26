@@ -13,9 +13,13 @@ def fitness_function(new_HS):
     find_blue = re.compile(r'Blue -> -?\d+')
     find_yellow = re.compile(r'Yellow -> -?\d+')
     find_number = re.compile(r'-?\d+')
-    blue_point = find_blue.findall(out_result)[0]
-    yellow_point = find_yellow.findall(out_result)[0]
-    population.append(new_HS, int(find_number.findall(yellow_point)[0]) - int(find_number.findall(blue_point)[0]))
+    try:
+        blue_point = find_blue.findall(out_result)[0]
+        yellow_point = find_yellow.findall(out_result)[0]
+    except:
+        print(find_blue.findall(out_result))
+        print(out_result)
+    population.append((new_HS, int(find_number.findall(yellow_point)[0]) - int(find_number.findall(blue_point)[0])))
 
 
 def mean_crossover(parent1, parent2):
