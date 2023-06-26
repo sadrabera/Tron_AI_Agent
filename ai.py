@@ -19,6 +19,9 @@ def find_neighbor(x, y):
     return (y, x - 1), (y + 1, x), (y, x + 1), (y - 1, x)
 
 
+hs_variables = dict()
+
+
 class AI(RealtimeAI):
 
     def __init__(self, world):
@@ -26,18 +29,15 @@ class AI(RealtimeAI):
         self.prev_decision = Moves(False, False, False, "Yellow")
         self.left_right = 0
 
-    
-    hs_variables=dict()
-    
     def initialize(self):
         print('initialize')
         print(str(self.world.agents[self.my_side].position) + "first step")
         print(str(self.world.constants.area_wall_crash_score))
         print(str(self.world.constants.my_wall_crash_score))
         print(str(self.world.constants.enemy_wall_crash_score))
+        global hs_variables
         with open('HS.json') as json_file:
             hs_variables = json.load(json_file)
-
 
     def decide(self):
         print('decide')
@@ -45,10 +45,10 @@ class AI(RealtimeAI):
         start = time.time()
         minimax_l = self.minimax(game_state, 8, True)
         end = time.time()
-        print(self.left_right)
-        print("time: " + str((end - start)))
-        if end - start > 8:
-            print('wtf')
+        # print(self.left_right)
+        # print("time: " + str((end - start)))
+        # if end - start > 8:
+             # print('wtf')
         next_move = minimax_l[1]
         self.prev_decision = next_move
         if next_move is not None:
@@ -139,7 +139,7 @@ class Game_State:
         diff_points = self.world.scores[my_side] - self.world.scores[other_side]
         if self.is_terminal():
             return diff_points
-        
+
         agents = self.world.agents
 
         diff_points += agents[my_side].health * hs_variables["value per health"]
